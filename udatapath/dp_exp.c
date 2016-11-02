@@ -64,15 +64,13 @@ dp_exp_action(struct packet *pkt, struct ofl_action_experimenter *act) {
         struct ofl_exp_msg_notify_state_change ntf_message;
         action = (struct ofl_exp_beba_act_header *) act;
         switch(action->act_type){
-
             case(OFPAT_EXP_SET_STATE):
             {
                 struct ofl_exp_action_set_state *wns = (struct ofl_exp_action_set_state *)action;
-                if (state_table_is_enabled(pkt->dp->pipeline->tables[wns->table_id]->state_table))
+                struct state_table *st = pkt->dp->pipeline->tables[wns->table_id]->state_table;
+                if (state_table_is_enabled(st))
                 {
-                    struct state_table *st = pkt->dp->pipeline->tables[wns->table_id]->state_table;
                     VLOG_DBG_RL(LOG_MODULE, &rl, "executing action NEXT STATE at stage %u", wns->table_id);
-
                     // State Sync: Get the new state, encoded in ntf_message, and pack a message to be sent via dp_send_message.
                     // This invocation occurs when a state transition happens due to a dynamic event (e.g., a newly received packet).
                     state_table_set_state(st, pkt, NULL, wns, &ntf_message);
@@ -103,14 +101,45 @@ dp_exp_action(struct packet *pkt, struct ofl_action_experimenter *act) {
             case(OFPAT_EXP_INC_STATE):
             {
                 struct ofl_exp_action_inc_state *wns = (struct ofl_exp_action_inc_state *)action;
-                if (state_table_is_enabled(pkt->dp->pipeline->tables[wns->table_id]->state_table))
+                struct state_table *st = pkt->dp->pipeline->tables[wns->table_id]->state_table;
+                if (state_table_is_enabled(st))
                 {
-                    struct state_table *table = pkt->dp->pipeline->tables[wns->table_id]->state_table;
-                    state_table_inc_state(table, pkt);
+                    state_table_inc_state(st, pkt);
                 }
                 else
                 {
                     VLOG_WARN_RL(LOG_MODULE, &rl, "ERROR NEXT STATE at stage %u: stage not stateful", wns->table_id);
+                }
+                break;
+            }
+            case (OFPAT_EXP_SET_DATA_VAR): 
+            {
+                struct ofl_exp_action_set_data_variable *act = (struct ofl_exp_action_set_data_variable *)action;
+                struct state_table *st = pkt->dp->pipeline->tables[act->table_id]->state_table;
+
+                if (state_table_is_enabled(st)){
+                    VLOG_DBG_RL(LOG_MODULE, &rl, "executing action SET DATA VAR at stage %u", act->table_id);
+                    state_table_set_data_variable(st, act, pkt);
+                }
+                else{
+                    VLOG_DBG_RL(LOG_MODULE, &rl, "ERROR SET DATA VAR at stage %u: stage not stateful", act->table_id);
+                }
+                break;
+            }
+            case (OFPAT_EXP_WRITE_CONTEXT_TO_FIELD): 
+            {
+                struct ofl_exp_action_write_context_to_field *act = (struct ofl_exp_action_write_context_to_field *)action;
+                struct state_table *st = pkt->dp->pipeline->tables[pkt->table_id]->state_table;
+                struct ofl_action_set_field* set_field_act;
+                if (state_table_is_enabled(st)){
+                    VLOG_DBG_RL(LOG_MODULE, &rl, "executing action WRITE CONTEXT TO FIELD at stage %u", pkt->table_id);
+                    set_field_act = (struct ofl_action_set_field*) state_table_write_context_to_field(st, act, pkt);
+                    if (set_field_act!=NULL){
+                        dp_actions_set_field(pkt, set_field_act);
+                    }
+                }
+                else{
+                    VLOG_DBG_RL(LOG_MODULE, &rl, "WRITE CONTEXT TO FIELD at stage %u: stage not stateful", pkt->table_id);
                 }
                 break;
             }

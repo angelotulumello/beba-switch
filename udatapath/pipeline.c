@@ -126,7 +126,9 @@ pipeline_process_packet(struct pipeline *pl, struct packet *pkt)
 {
     struct flow_table *table, *next_table;
     uint32_t *state_ptr = NULL;
+    uint8_t *condition_ptr[OFPSC_MAX_CONDITIONS_NUM] = {NULL};
     bool gstate_set = false;
+    int i = 0;
 
     if (VLOG_IS_DBG_ENABLED(LOG_MODULE)) {
         char *pkt_str = packet_to_string(pkt);
@@ -149,6 +151,7 @@ pipeline_process_packet(struct pipeline *pl, struct packet *pkt)
     next_table = pl->tables[0];
     while (next_table != NULL) {
         struct flow_entry *entry;
+        uint8_t condition_evaluation_result = 0;
 
         VLOG_DBG_RL(LOG_MODULE, &rl, "trying table %u.", next_table->stats->table_id);
 
@@ -160,16 +163,17 @@ pipeline_process_packet(struct pipeline *pl, struct packet *pkt)
 
         if (state_table_is_enabled(table->state_table)) {
             struct state_entry *state_entry;
-
+            table->state_table->last_lookup_state_entry = NULL;
+            table->state_table->last_update_state_entry = NULL;
             state_entry = state_table_lookup(table->state_table, pkt);
 
             if (state_ptr == NULL) {
                 // Allocate state to packet headers (experimenter).
 
                 oxm_set_info(&pkt->handle_std.info, state, state_entry->state);
-		state_ptr = &pkt->handle_std.info.state;
+                state_ptr = &pkt->handle_std.info.state;
 
-		//
+                //
                 // state_hdr = ofl_structs_match_exp_put32(&pkt->handle_std.pkt_match, OXM_EXP_STATE, 0xBEBABEBA,
                 //                                         state_entry->state);
 
@@ -182,10 +186,10 @@ pipeline_process_packet(struct pipeline *pl, struct packet *pkt)
             //TODO save global state header field ptr
             if (!gstate_set) {
 
-		uint32_t flags = pkt->handle_std.info.global_state;
+                uint32_t flags = pkt->handle_std.info.global_state;
 
                 flags = (flags & 0x00000000) | (pkt->dp->global_state);
-		oxm_set_info(&pkt->handle_std.info, global_state, flags);
+                oxm_set_info(&pkt->handle_std.info, global_state, flags);
                 gstate_set = true;
 
                 // // Append global states to packet headers.
@@ -195,8 +199,69 @@ pipeline_process_packet(struct pipeline *pl, struct packet *pkt)
                 //     gstate_set = true;
                 // }
             }
+
+            //Conditions evaluation
+            //TODO Davide: refactor to remove switch/case!
+            for (i=0;i<OFPSC_MAX_CONDITIONS_NUM;i++){
+                condition_evaluation_result = state_table_evaluate_condition(table->state_table, pkt, table->state_table->condition_table[i]);
+                switch (i) {
+                    case 0:
+                        oxm_set_info(&pkt->handle_std.info, condition0, condition_evaluation_result);
+                        break;
+                    case 1:
+                        oxm_set_info(&pkt->handle_std.info, condition1, condition_evaluation_result);
+                        break;
+                    case 2:
+                        oxm_set_info(&pkt->handle_std.info, condition2, condition_evaluation_result);
+                        break;
+                    case 3:
+                        oxm_set_info(&pkt->handle_std.info, condition3, condition_evaluation_result);
+                        break;
+                    case 4:
+                        oxm_set_info(&pkt->handle_std.info, condition4, condition_evaluation_result);
+                        break;
+                    case 5:
+                        oxm_set_info(&pkt->handle_std.info, condition5, condition_evaluation_result);
+                        break;
+                    case 6:
+                        oxm_set_info(&pkt->handle_std.info, condition6, condition_evaluation_result);
+                        break;
+                    case 7:
+                        oxm_set_info(&pkt->handle_std.info, condition7, condition_evaluation_result);
+                        break;
+                }
+                if (condition_ptr[i] == NULL) {
+                    switch (i) {
+                        case 0:
+                            condition_ptr[i] = &pkt->handle_std.info.condition0;
+                            break;
+                        case 1:
+                            condition_ptr[i] = &pkt->handle_std.info.condition1;
+                            break;
+                        case 2:
+                            condition_ptr[i] = &pkt->handle_std.info.condition2;
+                            break;
+                        case 3:
+                            condition_ptr[i] = &pkt->handle_std.info.condition3;
+                            break;
+                        case 4:
+                            condition_ptr[i] = &pkt->handle_std.info.condition4;
+                            break;
+                        case 5:
+                            condition_ptr[i] = &pkt->handle_std.info.condition5;
+                            break;
+                        case 6:
+                            condition_ptr[i] = &pkt->handle_std.info.condition6;
+                            break;
+                        case 7:
+                            condition_ptr[i] = &pkt->handle_std.info.condition7;
+                            break;
+                    }
+                }
+            }
+
         } else {
-            // FIXME: avoid matching on state on non-stateful stages.
+            // FIXME: avoid matching on state and conditions on non-stateful stages.
             // hint: don't touch the packet, avoid installing flowmods that match on state.
         }
 
@@ -208,6 +273,7 @@ pipeline_process_packet(struct pipeline *pl, struct packet *pkt)
             // VLOG_DBG_RL(LOG_MODULE, &rl, "searching table entry in table %d for packet match: %s.", table->stats->table_id, m);
             // free(m);
         }
+
 
         entry = flow_table_lookup(table, pkt, pkt->dp->exp);
 

@@ -10,11 +10,9 @@
 #include "../include/openflow/beba-ext.h"
 
 
-#define MAX_EXTRACTION_FIELD_COUNT 6
-#define MAX_STATE_KEY_LEN 48
-
 #define STATE_DEFAULT 0
 #define STATE_NULL UINT32_MAX
+#define CONDITION_NULL UINT8_MAX
 /**************************************************************************/
 /*                        experimenter messages ofl_exp                   */
 /**************************************************************************/
@@ -80,6 +78,12 @@ struct ofl_exp_set_global_state {
     uint32_t global_state_mask;
 };
 
+struct ofl_exp_set_header_field_extractor {
+    uint8_t table_id;
+    uint8_t extractor_id;
+    uint32_t field;
+};
+
 /************************
  * pkttmp mod messages
  ************************/
@@ -100,6 +104,30 @@ struct ofl_exp_del_pkttmp {
 	uint32_t pkttmp_id;
 };
 
+struct ofl_exp_set_condition {
+    uint8_t table_id;
+    uint8_t condition_id;
+    uint8_t condition;
+    uint8_t operand_types;
+    uint8_t operand_1;
+    uint8_t operand_2;
+};
+
+struct ofl_exp_set_global_data_variable {
+    uint8_t table_id;
+    uint8_t global_data_variable_id;
+    uint32_t value;
+    uint32_t mask;
+};
+
+struct ofl_exp_set_flow_data_variable {
+    uint8_t table_id;
+    uint8_t flow_data_variable_id;
+    uint32_t key_len;
+    uint32_t value;
+    uint32_t mask;
+    uint8_t key[OFPSC_MAX_KEY_LEN];
+};
 
 /*************************
 * Multipart reply message: State entry statistics
@@ -108,6 +136,7 @@ struct ofl_exp_state_entry{
     uint32_t            key_len;
     uint8_t             key[OFPSC_MAX_KEY_LEN];
     uint32_t            state;
+    uint32_t            flow_data_var[OFPSC_MAX_FLOW_DATA_VAR_NUM];
 };
 
 struct ofl_exp_state_stats {
@@ -170,7 +199,9 @@ struct ofl_exp_action_set_state {
     uint32_t idle_rollback;
     uint32_t hard_timeout;
     uint32_t idle_timeout;
-    uint8_t bit;
+    uint8_t bit; 
+    uint32_t field_count;
+    uint32_t fields[OFPSC_MAX_FIELD_COUNT];
 };
 
 struct ofl_exp_action_set_global_state {
@@ -182,27 +213,62 @@ struct ofl_exp_action_set_global_state {
 
 struct ofl_exp_action_inc_state {
     struct ofl_exp_beba_act_header header; /* OFPAT_EXP_INC_STATE */
-
+    
     uint8_t table_id;
+};
+
+struct ofl_exp_action_set_data_variable {
+    struct ofl_exp_beba_act_header   header; /* OFPAT_EXP_SET_DATA VARIABLE */
+
+    uint16_t operand_types;
+    uint8_t table_id;
+    uint8_t opcode;
+    uint8_t output;
+    uint8_t operand_1;
+    uint8_t operand_2;
+    uint8_t operand_3;
+    uint8_t operand_4;
+    int8_t coeff_1;
+    int8_t coeff_2;
+    int8_t coeff_3;
+    int8_t coeff_4;
+    uint32_t field_count;
+    uint32_t fields[OFPSC_MAX_FIELD_COUNT];
+};
+
+struct ofl_exp_action_write_context_to_field {
+    struct ofl_exp_beba_act_header header; /* OFPAT_EXP_WRITE_CONTEXT_TO_FIELD */
+    uint8_t src_type;
+    uint8_t src_id;
+    uint32_t dst_field;
 };
 
 /*************************************************************************/
 /*                        experimenter state table						 */
 /*************************************************************************/
 
+struct condition_table_entry {
+    uint8_t condition;
+    uint8_t operand_1_type;
+    uint8_t operand_2_type;
+    uint8_t operand_1;
+    uint8_t operand_2;
+};
 
 struct key_extractor {
     uint8_t                     table_id;
     uint8_t                     bit;
     uint32_t                    field_count;
-    uint32_t                    fields[MAX_EXTRACTION_FIELD_COUNT];
+    uint32_t                    fields[OFPSC_MAX_FIELD_COUNT];
     uint32_t                    key_len;
 };
 
 struct state_entry {
     struct hmap_node            hmap_node;
-    uint8_t             key[MAX_STATE_KEY_LEN];
-    uint32_t                state;
+    uint8_t                     key[OFPSC_MAX_KEY_LEN];
+    uint32_t                    state;
+    uint32_t                    flow_data_var[OFPSC_MAX_FLOW_DATA_VAR_NUM];
+
     struct ofl_exp_state_stats   *stats;
     uint64_t                created;  /* time the entry was created at [us] */
     uint64_t                remove_at; /* time the entry should be removed at
@@ -214,10 +280,14 @@ struct state_table {
     struct key_extractor        lookup_key_extractor;
     struct key_extractor        update_key_extractor;
     struct key_extractor        bit_update_key_extractor;
+    struct key_extractor        header_field_extractor[OFPSC_MAX_HEADER_FIELDS];
+    struct condition_table_entry*  condition_table[OFPSC_MAX_CONDITIONS_NUM];
+    uint32_t                    global_data_var[OFPSC_MAX_GLOBAL_DATA_VAR_NUM];
     struct hmap                 state_entries;
     struct state_entry          default_state_entry;
     struct state_entry          null_state_entry;
     struct state_entry *        last_lookup_state_entry;
+    struct state_entry *        last_update_state_entry;
     bool                        update_scope_is_eq_lookup_scope;
     bool                        bit_update_scope_is_eq_lookup_scope;
     uint8_t stateful;
@@ -262,17 +332,29 @@ bool state_table_is_enabled(struct state_table *table);
 struct state_entry *
 state_table_lookup(struct state_table*, struct packet *);
 
-static  inline
-void state_table_write_state_header(struct state_entry *entry, uint32_t *state)
-{
-    *state = entry->state;
-}
+struct state_entry *
+state_table_lookup_from_scope(struct state_table* table, struct packet *pkt, struct key_extractor* key_extract, bool with_lookup_scope);
 
 bool
 extractors_are_equal(struct key_extractor *ke1, struct key_extractor *ke2);
 
+bool
+state_entry_apply_hard_timeout(struct state_entry *entry, uint64_t ts);
+
+bool
+state_entry_apply_idle_timeout(struct state_entry *entry, uint64_t ts);
+
+bool
+state_entry_apply_hard_timeout(struct state_entry *entry, uint64_t ts);
+
+bool
+can_be_flushed(struct state_entry *entry);
+
 void
 state_table_flush(struct state_table *table);
+
+uint32_t
+compute_key_len(struct key_extractor *extractor);
 
 /*
  * State Sync: One extra argument (i.e., ntf_message) is passed at the end of this function.
@@ -289,10 +371,55 @@ state_table_set_extractor(struct state_table *, struct key_extractor *, int);
 ofl_err
 state_table_del_state(struct state_table *, uint8_t *, uint32_t);
 
+void
+state_table_timeout(struct state_table *table);
+
+bool
+retrieve_operand(uint32_t *operand_value, uint8_t operand_type, uint8_t operand_id, char * operand_name, struct state_table *table, struct packet *pkt, struct key_extractor *extractor, bool with_lookup_scope);
+
+ofl_err
+state_table_set_condition(struct state_table *table, struct ofl_exp_set_condition *p);
+
+void
+state_table_set_data_variable(struct state_table *table, struct ofl_exp_action_set_data_variable *act, struct packet *pkt);
+
+ofl_err
+state_table_set_flow_data_variable(struct state_table *table, struct packet *pkt, struct ofl_exp_set_flow_data_variable *msg, uint8_t data_variable_id, uint32_t data_variable_value);
+
+ofl_err
+state_table_set_header_field_extractor(struct state_table *table, struct ofl_exp_set_header_field_extractor *hfe);
+
+int
+state_table_evaluate_condition(struct state_table *state_table,struct packet *pkt,struct condition_table_entry* condition_table_entry);
+
+struct ofl_action_set_field *
+state_table_write_context_to_field(struct state_table *table, struct ofl_exp_action_write_context_to_field *act, struct packet *pkt);
+
+/*void
+state_table_configure_stateful(struct state_table *table, uint8_t stateful);
+
+bool
+state_entry_apply_idle_timeout(struct state_entry *entry, uint64_t ts);
+
+bool
+state_entry_apply_hard_timeout(struct state_entry *entry, uint64_t ts);*/
+
 /*experimenter message functions*/
+
+ofl_err
+ofl_structs_set_condition_unpack(struct ofp_exp_set_condition const *src, size_t *len, struct ofl_exp_set_condition *dst);
+
+ofl_err
+ofl_structs_set_global_data_var_unpack(struct ofp_exp_set_global_data_variable const *src, size_t *len, struct ofl_exp_set_global_data_variable *dst);
+
+ofl_err
+ofl_structs_set_flow_data_var_unpack(struct ofp_exp_set_flow_data_variable const *src, size_t *len, struct ofl_exp_set_flow_data_variable *dst);
 
 int
 ofl_exp_beba_msg_pack(struct ofl_msg_experimenter const *msg, uint8_t **buf, size_t *buf_len, struct ofl_exp const *exp);
+
+ofl_err
+check_operands(uint8_t operand_type, uint8_t operand_value, char * operand_name, bool allow_constant, bool allow_header_field);
 
 ofl_err
 ofl_exp_beba_msg_unpack(struct ofp_header const *oh, size_t *len, struct ofl_msg_experimenter **msg, struct ofl_exp const *exp);
@@ -512,6 +639,9 @@ pkttmp_table_create(struct datapath *dp);
 
 void
 pkttmp_table_destroy(struct pkttmp_table *table);
+
+void
+state_table_configure_stateful(struct state_table *table, uint8_t stateful);
 
 /* experimenter pkttmp entry functions */
 struct pkttmp_entry *

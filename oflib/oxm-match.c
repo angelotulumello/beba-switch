@@ -562,12 +562,21 @@ parse_oxm_entry(struct ofl_match *match, const struct oxm_field *f, const void *
         case OFI_OXM_OF_IPV6_EXTHDR_W:
             ofl_structs_match_put16m(match, f->header, ntohs(*((uint16_t const*) value)),ntohs(*((uint16_t const*) mask)));
             return 0;
-
-	case OFI_OXM_EXP_STATE_W:
-	case OFI_OXM_EXP_GLOBAL_STATE:
-	case OFI_OXM_EXP_GLOBAL_STATE_W:
-
-	case OFI_OXM_EXP_STATE:
+        case OFI_OXM_EXP_STATE:
+        case OFI_OXM_EXP_STATE_W:
+        case OFI_OXM_EXP_GLOBAL_STATE:
+        case OFI_OXM_EXP_GLOBAL_STATE_W:
+        case OFI_OXM_EXP_CONDITION0:
+        case OFI_OXM_EXP_CONDITION1:
+        case OFI_OXM_EXP_CONDITION2:
+        case OFI_OXM_EXP_CONDITION3:
+        case OFI_OXM_EXP_CONDITION4:
+        case OFI_OXM_EXP_CONDITION5:
+        case OFI_OXM_EXP_CONDITION6:
+        case OFI_OXM_EXP_CONDITION7:
+        case OFI_OXM_EXP_TIMESTAMP:
+        case OFI_OXM_EXP_RANDOM:
+        case OFI_OXM_EXP_PKT_LEN:
         case NUM_OXM_FIELDS:
             NOT_REACHED();
     }
@@ -1103,8 +1112,19 @@ oxm_match_lookup_info(struct oxm_packet_info *info, int oxm_label, size_t *lengt
 	case OXM_OF_SCTP_SRC	: return oxm_lookup_info(info, length,  sctp_src);
 	case OXM_OF_SCTP_DST	: return oxm_lookup_info(info, length,  sctp_dst);
 
+    case OXM_EXP_CONDITION0 : return oxm_lookup_info(info, length,  condition0);
+    case OXM_EXP_CONDITION1 : return oxm_lookup_info(info, length,  condition1);
+    case OXM_EXP_CONDITION2 : return oxm_lookup_info(info, length,  condition2);
+    case OXM_EXP_CONDITION3 : return oxm_lookup_info(info, length,  condition3);
+    case OXM_EXP_CONDITION4 : return oxm_lookup_info(info, length,  condition4);
+    case OXM_EXP_CONDITION5 : return oxm_lookup_info(info, length,  condition5);
+    case OXM_EXP_CONDITION6 : return oxm_lookup_info(info, length,  condition6);
+    case OXM_EXP_CONDITION7 : return oxm_lookup_info(info, length,  condition7);
+    case OXM_EXP_TIMESTAMP : return oxm_lookup_info(info, length,  timestamp);
+    case OXM_EXP_RANDOM : return oxm_lookup_info(info, length,  random);
+    case OXM_EXP_PKT_LEN : return oxm_lookup_info(info, length,  pkt_len);
+
 	default: return NULL;
 	}
 }
-
 

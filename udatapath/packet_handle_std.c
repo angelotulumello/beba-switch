@@ -456,7 +456,6 @@ int packet_parse(struct packet const *pkt, struct oxm_packet_info *info, struct 
 
 void
 packet_handle_std_validate(struct packet_handle_std *handle) {
-
     // struct ofl_match_tlv * iter, *next, *f;
     //
 
@@ -464,31 +463,96 @@ packet_handle_std_validate(struct packet_handle_std *handle) {
     uint64_t tunnel_id    = 0;
     uint32_t state        = 0;
     uint32_t global_state = OFP_GLOBAL_STATE_DEFAULT;
+    uint32_t timestamp = (1000000 * handle->pkt->ts.tv_sec + handle->pkt->ts.tv_usec)/1000;
+    uint16_t random = 0;    //TODO Davide: pick a random number (see udatapath/group_entry.c)
+    uint8_t condition[OFPSC_MAX_CONDITIONS_NUM] = { 0 };
 
     bool has_state = false;
+    bool has_condition[OFPSC_MAX_CONDITIONS_NUM] = { false };
+    int i = 0;
 
-    if(handle->valid)
+    if (handle->valid)
         return;
 
     if (oxm_has_valid(&handle->info, metadata))
     {
-	metadata = handle->info.metadata;
+        metadata = handle->info.metadata;
     }
 
     if (oxm_has_valid(&handle->info, tunnel_id))
     {
-	tunnel_id = handle->info.metadata;
+        tunnel_id = handle->info.tunnel_id;
     }
 
     if (oxm_has_valid(&handle->info, state))
     {
-	state = handle->info.state;
-	has_state = true;
+        state = handle->info.state;
+        has_state = true;
     }
 
     if (oxm_has_valid(&handle->info, global_state))
     {
-	global_state = handle->info.global_state;
+        global_state = handle->info.global_state;
+    }
+
+    //TODO Davide: refactor to remove switch/case
+    for (i=0;i<OFPSC_MAX_CONDITIONS_NUM;i++){
+        switch (i) {
+            case 0:
+                if (oxm_has_valid(&handle->info, condition0)) {
+                    condition[i] = handle->info.condition0;
+                    has_condition[i] = true;
+                }
+                break;
+            case 1:
+                if (oxm_has_valid(&handle->info, condition1)) {
+                    condition[i] = handle->info.condition1;
+                    has_condition[i] = true;
+                }
+                break;
+            case 2:
+                if (oxm_has_valid(&handle->info, condition2)) {
+                    condition[i] = handle->info.condition2;
+                    has_condition[i] = true;
+                }
+                break;
+            case 3:
+                if (oxm_has_valid(&handle->info, condition3)) {
+                    condition[i] = handle->info.condition3;
+                    has_condition[i] = true;
+                }
+                break;
+            case 4:
+                if (oxm_has_valid(&handle->info, condition4)) {
+                    condition[i] = handle->info.condition4;
+                    has_condition[i] = true;
+                }
+                break;
+            case 5:
+                if (oxm_has_valid(&handle->info, condition5)) {
+                    condition[i] = handle->info.condition5;
+                    has_condition[i] = true;
+                }
+                break;
+            case 6:
+                if (oxm_has_valid(&handle->info, condition6)) {
+                    condition[i] = handle->info.condition6;
+                    has_condition[i] = true;
+                }
+                break;
+            case 7:
+                if (oxm_has_valid(&handle->info, condition7)) {
+                    condition[i] = handle->info.condition7;
+                    has_condition[i] = true;
+                }
+                break;
+        }
+    }
+
+    //Remove this to choose a random value at each validation
+    if (oxm_has_valid(&handle->info, random))
+    {
+        random = handle->info.random;
     }
 
     // HMAP_FOR_EACH_WITH_HASH(f, struct ofl_match_tlv, hmap_node,
@@ -536,23 +600,58 @@ packet_handle_std_validate(struct packet_handle_std *handle) {
     // ofl_structs_match_put32(&handle->pkt_match, OXM_OF_IN_PORT, handle->pkt->in_port);
 
     oxm_set_info(&handle->info, in_port, handle->pkt->in_port);
+    oxm_set_info(&handle->info, metadata, metadata);
+    oxm_set_info(&handle->info, tunnel_id, tunnel_id);
     oxm_set_info(&handle->info, global_state, global_state);
+    oxm_set_info(&handle->info, pkt_len, handle->pkt->buffer->size);
+    oxm_set_info(&handle->info, timestamp, timestamp);
+    oxm_set_info(&handle->info, random, random);
 
     // /* Add global register value to the hash_map */
     // ofl_structs_match_exp_put32(&handle->pkt_match, OXM_EXP_GLOBAL_STATE, 0xBEBABEBA, current_global_state);
 
     if(has_state)
     {
-	oxm_set_info(&handle->info, state, state);
+        oxm_set_info(&handle->info, state, state);
         // ofl_structs_match_exp_put32(&handle->pkt_match, OXM_EXP_STATE, 0xBEBABEBA, state);
     }
 
+    //TODO Davide: should we re-add metadata/tunnel_id?
     // /*Add metadata  and tunnel_id value to the hash_map */
     // ofl_structs_match_put64(&handle->pkt_match,  OXM_OF_METADATA, metadata);
     // ofl_structs_match_put64(&handle->pkt_match,  OXM_OF_TUNNEL_ID, tunnel_id);
 
-    oxm_set_info(&handle->info, metadata, metadata);
-    oxm_set_info(&handle->info, tunnel_id, tunnel_id);
+    //TODO Davide: refactor removing switch/case
+    for (i=0;i<OFPSC_MAX_CONDITIONS_NUM;i++){
+        if (has_condition[i]){
+            switch (i) {
+                case 0:
+                    oxm_set_info(&handle->info, condition0, condition[i]);
+                    break;
+                case 1:
+                    oxm_set_info(&handle->info, condition1, condition[i]);
+                    break;
+                case 2:
+                    oxm_set_info(&handle->info, condition2, condition[i]);
+                    break;
+                case 3:
+                    oxm_set_info(&handle->info, condition3, condition[i]);
+                    break;
+                case 4:
+                    oxm_set_info(&handle->info, condition4, condition[i]);
+                    break;
+                case 5:
+                    oxm_set_info(&handle->info, condition5, condition[i]);
+                    break;
+                case 6:
+                    oxm_set_info(&handle->info, condition6, condition[i]);
+                    break;
+                case 7:
+                    oxm_set_info(&handle->info, condition7, condition[i]);
+                    break;
+            }
+        }
+    }
 }
 
 

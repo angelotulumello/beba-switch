@@ -231,8 +231,19 @@
 #define EXP_ID_LEN 4
 #define OXM_EXP_GLOBAL_STATE OXM_HEADER     (0xFFFF, 0, 8)
 #define OXM_EXP_GLOBAL_STATE_W OXM_HEADER_W (0xFFFF, 0, 6)  /*(experimenter_id + global_state + mask)/2*/
-#define OXM_EXP_STATE OXM_HEADER     (0xFFFF, 1, 8)
-#define OXM_EXP_STATE_W OXM_HEADER_W (0xFFFF, 1, 6)
+#define OXM_EXP_STATE OXM_HEADER            (0xFFFF, 1, 8)
+#define OXM_EXP_STATE_W OXM_HEADER_W        (0xFFFF, 1, 6)
+#define OXM_EXP_CONDITION0 OXM_HEADER       (0xFFFF, 2, 5)
+#define OXM_EXP_CONDITION1 OXM_HEADER       (0xFFFF, 3, 5)
+#define OXM_EXP_CONDITION2 OXM_HEADER       (0xFFFF, 4, 5)
+#define OXM_EXP_CONDITION3 OXM_HEADER       (0xFFFF, 5, 5)
+#define OXM_EXP_CONDITION4 OXM_HEADER       (0xFFFF, 6, 5)
+#define OXM_EXP_CONDITION5 OXM_HEADER       (0xFFFF, 7, 5)
+#define OXM_EXP_CONDITION6 OXM_HEADER       (0xFFFF, 8, 5)
+#define OXM_EXP_CONDITION7 OXM_HEADER       (0xFFFF, 9, 5)
+#define OXM_EXP_TIMESTAMP OXM_HEADER        (0xFFFF, 10, 8)
+#define OXM_EXP_RANDOM OXM_HEADER           (0xFFFF, 11, 6)
+#define OXM_EXP_PKT_LEN OXM_HEADER          (0xFFFF, 12, 6)
 
 /* ## ------------------------------- ## */
 /* ## IPv6 compatible fields. ## */
@@ -294,7 +305,7 @@ enum oxm_field_index {
 #define DEFINE_FIELD(HEADER,DL_TYPES, NW_PROTO, MASKABLE) \
         OFI_OXM_##HEADER,
 #include "oxm-match.def"
-    NUM_OXM_FIELDS = 62
+    NUM_OXM_FIELDS = 73
 };
 
 struct oxm_field {
@@ -371,7 +382,17 @@ struct oxm_packet_info {
 #define	HAS_VALID_icmp_code				(1ULL << 39)
 #define	HAS_VALID_icmp6_type			(1ULL << 40)
 #define	HAS_VALID_icmp6_code			(1ULL << 41)
-
+#define	HAS_VALID_condition0			(1ULL << 42)
+#define	HAS_VALID_condition1			(1ULL << 43)
+#define	HAS_VALID_condition2			(1ULL << 44)
+#define	HAS_VALID_condition3			(1ULL << 45)
+#define	HAS_VALID_condition4			(1ULL << 46)
+#define	HAS_VALID_condition5			(1ULL << 47)
+#define	HAS_VALID_condition6			(1ULL << 48)
+#define	HAS_VALID_condition7			(1ULL << 49)
+#define	HAS_VALID_timestamp				(1ULL << 50)
+#define	HAS_VALID_random				(1ULL << 51)
+#define	HAS_VALID_pkt_len				(1ULL << 52)
 
 	unsigned long long valid;
 
@@ -379,6 +400,18 @@ struct oxm_packet_info {
 	uint64_t	tunnel_id;
 	uint32_t	state;
 	uint32_t	global_state;
+	//TODO Davide: refactor with: uint8_t condition[OFPSC_MAX_CONDITIONS_NUM];
+	uint8_t		condition0;
+	uint8_t		condition1;
+	uint8_t		condition2;
+	uint8_t		condition3;
+	uint8_t		condition4;
+	uint8_t		condition5;
+	uint8_t		condition6;
+	uint8_t		condition7;
+	uint32_t	timestamp;
+	uint16_t	random;
+	uint16_t	pkt_len;
 	uint32_t	in_port;
 
 	uint16_t	eth_type;

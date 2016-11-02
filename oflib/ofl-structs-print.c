@@ -475,7 +475,39 @@ ofl_structs_oxm_tlv_print(FILE *stream, struct ofl_match_tlv *f)
 			            fprintf(stream,"%s",string_value);
 			        }
 					break;
-	
+				case OFPXMT_EXP_CONDITION0:
+		        	fprintf(stream, "condition0=\"%d\"", *((uint8_t*)(f->value + EXP_ID_LEN)));
+		 			break;
+		 		case OFPXMT_EXP_CONDITION1:
+		        	fprintf(stream, "condition1=\"%d\"", *((uint8_t*)(f->value + EXP_ID_LEN)));
+		 			break;
+		 		case OFPXMT_EXP_CONDITION2:
+		        	fprintf(stream, "condition2=\"%d\"", *((uint8_t*)(f->value + EXP_ID_LEN)));
+		 			break;
+		 		case OFPXMT_EXP_CONDITION3:
+		        	fprintf(stream, "condition3=\"%d\"", *((uint8_t*)(f->value + EXP_ID_LEN)));
+		 			break;
+		 		case OFPXMT_EXP_CONDITION4:
+		        	fprintf(stream, "condition4=\"%d\"", *((uint8_t*)(f->value + EXP_ID_LEN)));
+		 			break;
+		 		case OFPXMT_EXP_CONDITION5:
+		        	fprintf(stream, "condition5=\"%d\"", *((uint8_t*)(f->value + EXP_ID_LEN)));
+		 			break;
+		 		case OFPXMT_EXP_CONDITION6:
+		        	fprintf(stream, "condition6=\"%d\"", *((uint8_t*)(f->value + EXP_ID_LEN)));
+		 			break;
+		 		case OFPXMT_EXP_CONDITION7:
+		        	fprintf(stream, "condition7=\"%d\"", *((uint8_t*)(f->value + EXP_ID_LEN)));
+		 			break;
+		 		case OFPXMT_EXP_TIMESTAMP:
+		        	fprintf(stream, "timestamp=\"%"PRIu32"\"", *((uint32_t*)(f->value + EXP_ID_LEN)));
+		 			break;
+		 		case OFPXMT_EXP_RANDOM:
+		        	fprintf(stream, "random=\"%"PRIu16"\"", *((uint16_t*)(f->value + EXP_ID_LEN)));
+		 			break;
+		 		case OFPXMT_EXP_PKT_LEN:
+   		        	fprintf(stream, "pkt_len=\"%"PRIu16"\"", *((uint16_t*)(f->value + EXP_ID_LEN)));
+  		 			break;
 				default:
 					fprintf(stream, "unknown type %d", field);
 			}
