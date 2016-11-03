@@ -491,40 +491,6 @@ packet_handle_std_validate(struct packet_handle_std *handle) {
 	global_state = handle->info.global_state;
     }
 
-    // HMAP_FOR_EACH_WITH_HASH(f, struct ofl_match_tlv, hmap_node,
-    //     hash_int(OXM_OF_METADATA,0), &handle->pkt_match.match_fields){
-    //     metadata = *(uint64_t *)(f->value);
-    // }
-
-    // HMAP_FOR_EACH_WITH_HASH(f, struct ofl_match_tlv, hmap_node,
-    //     hash_int(OXM_OF_TUNNEL_ID,0), & handle->pkt_match.match_fields){
-    //     tunnel_id = *(uint64_t *)(f->value);
-    // }
-
-    // HMAP_FOR_EACH_WITH_HASH(f, struct ofl_match_tlv, hmap_node,
-    //     hash_int(OXM_EXP_STATE,0), & handle->pkt_match.match_fields){
-    //     state = *(uint32_t *)(f->value + EXP_ID_LEN);
-    //     has_state = true;
-    // }
-
-    // HMAP_FOR_EACH_WITH_HASH(f, struct ofl_match_tlv,
-    //     hmap_node, hash_int(OXM_EXP_GLOBAL_STATE,0), &handle->pkt_match.match_fields){
-    //     current_global_state = *((uint32_t*) (f->value + EXP_ID_LEN));
-    // }
-
-    // if (handle->pkt_match.dirty)
-    // {
-    // HMAP_FOR_EACH_SAFE(iter, next, struct ofl_match_tlv, hmap_node, &handle->pkt_match.match_fields)
-    // {
-    //     if (iter->ownership) {
-    //     	free(iter->value);
-    //     	free(iter);
-    //     }
-    // }
-    // }
-
-    // ofl_structs_match_init(&handle->pkt_match);
-
     oxm_reset_all(&handle->info);
 
     if (packet_parse(handle->pkt, &handle->info, &handle->proto) < 0)
@@ -532,24 +498,19 @@ packet_handle_std_validate(struct packet_handle_std *handle) {
 
     handle->valid = true;
 
-    // /* Add in_port value to the hash_map */
-    // ofl_structs_match_put32(&handle->pkt_match, OXM_OF_IN_PORT, handle->pkt->in_port);
+    /* Add in_port value to the hash_map */
 
     oxm_set_info(&handle->info, in_port, handle->pkt->in_port);
     oxm_set_info(&handle->info, global_state, global_state);
 
-    // /* Add global register value to the hash_map */
-    // ofl_structs_match_exp_put32(&handle->pkt_match, OXM_EXP_GLOBAL_STATE, 0xBEBABEBA, current_global_state);
+    /* Add global register value to the hash_map */
 
     if(has_state)
     {
 	oxm_set_info(&handle->info, state, state);
-        // ofl_structs_match_exp_put32(&handle->pkt_match, OXM_EXP_STATE, 0xBEBABEBA, state);
     }
 
-    // /*Add metadata  and tunnel_id value to the hash_map */
-    // ofl_structs_match_put64(&handle->pkt_match,  OXM_OF_METADATA, metadata);
-    // ofl_structs_match_put64(&handle->pkt_match,  OXM_OF_TUNNEL_ID, tunnel_id);
+    /*Add metadata  and tunnel_id value to the hash_map */
 
     oxm_set_info(&handle->info, metadata, metadata);
     oxm_set_info(&handle->info, tunnel_id, tunnel_id);
