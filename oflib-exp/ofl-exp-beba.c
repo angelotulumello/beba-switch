@@ -1768,8 +1768,8 @@ state_table_flush(struct state_table *table)
 /*having the read_key, look for the state value inside the state_table */
 struct state_entry * state_table_lookup(struct state_table* table, struct packet *pkt)
 {
+    uint8_t key[MAX_STATE_KEY_LEN];
     struct state_entry * e = NULL;
-    uint8_t key[MAX_STATE_KEY_LEN] = {0};
     uint64_t now;
 
     if(!__extract_key(key, &table->lookup_key_extractor, pkt))
@@ -1943,7 +1943,7 @@ ofl_err state_table_set_state(struct state_table *table, struct packet *pkt,
                            struct ofl_exp_set_flow_state *msg, struct ofl_exp_action_set_state *act,
                            struct ofl_exp_msg_notify_state_change *ntf_message)
 {
-    uint8_t key[MAX_STATE_KEY_LEN] = {0};
+    uint8_t key[MAX_STATE_KEY_LEN]; // = {0};
     struct state_entry *e;
     uint32_t state, state_mask,
             idle_rollback, hard_rollback,
