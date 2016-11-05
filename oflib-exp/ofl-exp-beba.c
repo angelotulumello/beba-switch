@@ -26,8 +26,7 @@ OFL_LOG_INIT(LOG_MODULE)
 /* functions used  by ofp_exp_msg_pkttmp_mod */
 static ofl_err
 ofl_structs_add_pkttmp_unpack(struct ofp_exp_add_pkttmp const *src, size_t *len, struct ofl_exp_add_pkttmp *dst) {
-    //int i;
-    //uint8_t key[OFPSC_MAX_KEY_LEN] = {0};
+
     uint8_t *data = NULL;
 
     if( *len >= sizeof(struct ofp_exp_add_pkttmp) )
@@ -53,8 +52,6 @@ ofl_structs_add_pkttmp_unpack(struct ofp_exp_add_pkttmp const *src, size_t *len,
 
 static ofl_err
 ofl_structs_del_pkttmp_unpack(struct ofp_exp_del_pkttmp const *src, size_t *len, struct ofl_exp_del_pkttmp *dst) {
-    //int i;
-    //uint8_t key[OFPSC_MAX_KEY_LEN] = {0};
 
     if( *len == sizeof(struct ofp_exp_del_pkttmp) )
     {
@@ -1768,7 +1765,7 @@ state_table_flush(struct state_table *table)
 /*having the read_key, look for the state value inside the state_table */
 struct state_entry * state_table_lookup(struct state_table* table, struct packet *pkt)
 {
-    uint8_t key[MAX_STATE_KEY_LEN];
+    uint8_t key[MAX_STATE_KEY_LEN] = {0};
     struct state_entry * e = NULL;
     uint64_t now;
 
@@ -1942,7 +1939,7 @@ ofl_err state_table_set_state(struct state_table *table, struct packet *pkt,
                            struct ofl_exp_set_flow_state *msg, struct ofl_exp_action_set_state *act,
                            struct ofl_exp_msg_notify_state_change *ntf_message)
 {
-    uint8_t key[MAX_STATE_KEY_LEN]; // = {0};
+    uint8_t key[MAX_STATE_KEY_LEN] = {0};
     struct state_entry *e;
     uint32_t state, state_mask,
             idle_rollback, hard_rollback,
@@ -2097,14 +2094,14 @@ ofl_err state_table_inc_state(struct state_table *table, struct packet *pkt){
     uint8_t key[MAX_STATE_KEY_LEN] = {0};
     struct state_entry *e;
     uint64_t now;
-    ofl_err res = 0;
+
     bool entry_to_update_is_cached = table->update_scope_is_eq_lookup_scope && table->last_lookup_state_entry != NULL;
 
     //Extract the key (we avoid to re-extract it if update-scope == lookup-scope)
     if (!entry_to_update_is_cached) {
         if (!__extract_key(key, &table->update_key_extractor, pkt)) {
             OFL_LOG_DBG(LOG_MODULE, "update key fields not found in the packet's header");
-            return res;
+            return 0;
         }
 
         HMAP_FOR_EACH_WITH_HASH(e, struct state_entry, hmap_node,
