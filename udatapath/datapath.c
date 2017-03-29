@@ -56,7 +56,7 @@
 #include "oflib/ofl-log.h"
 #include "oflib-exp/ofl-exp.h"
 #include "oflib-exp/ofl-exp-nicira.h"
-#include "oflib-exp/ofl-exp-beba.h"
+#include "oflib-exp/ofl-exp-opp.h"
 #include "oflib/ofl-messages.h"
 #include "oflib/ofl-log.h"
 #include "openflow/openflow.h"
@@ -183,7 +183,7 @@ dp_new(void)
     dp->generation_id = -1;
 
     dp->last_timeout = time_now();
-    dp->next_state_table_flush = time_now() + BEBA_STATE_FLUSH_INTERVAL;
+    dp->next_state_table_flush = time_now() + OPP_STATE_FLUSH_INTERVAL;
     list_init(&dp->remotes);
     dp->listeners = NULL;
     dp->n_listeners = 0;
@@ -295,7 +295,7 @@ dp_run(struct datapath *dp, int nrun) {
     }
 
     if (now >= dp->next_state_table_flush){
-        dp->next_state_table_flush = now + BEBA_STATE_FLUSH_INTERVAL;
+        dp->next_state_table_flush = now + OPP_STATE_FLUSH_INTERVAL;
         pipeline_flush_state_tables(dp->pipeline, now*1000000);
     }
 

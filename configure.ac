@@ -72,17 +72,17 @@ if test "$enable_skiptrill" = "yes"; then
   AC_DEFINE(SKIP_TRILL, [], [Skip TRILL protocol])
 fi
 
-# BEBA options
+# OPP options
 
-AC_DEFINE(BEBA_USE_LIBPCAP,         1,   [BEBA pcap packet I/O acceleration])
-AC_DEFINE(BEBA_USE_LIBPCAP_ZEROCOPY,1,   [BEBA zero-copy using pcap buffers])
-AC_DEFINE(BEBA_WORK_BUDGET,         128, [BEBA work budget for batch I/O acceleration])
-AC_DEFINE(BEBA_CTRL_PLANE_RELAX,    0,  [BEBA control-plane relax factor (power of 2)])
-AC_DEFINE(BEBA_MATCH_POOL_SIZE,     16,  [BEBA size of pool for small TLV node])
-AC_DEFINE(BEBA_MATCH_VALUE_SIZE,    16,  [BEBA size of TLV value])
-AC_DEFINE(BEBA_HMAP_INIT_SIZE,      8,   [BEBA size of init hmap])
-AC_DEFINE(BEBA_STATE_FLUSH_INTERVAL,60,  [BEBA state table flush interval (in seconds)])
-AC_DEFINE(BEBA_STATE_NOTIFICATIONS, 0,   [BEBA state notifications])
+AC_DEFINE(OPP_USE_LIBPCAP,         1,   [OPP pcap packet I/O acceleration])
+AC_DEFINE(OPP_USE_LIBPCAP_ZEROCOPY,1,   [OPP zero-copy using pcap buffers])
+AC_DEFINE(OPP_WORK_BUDGET,         128, [OPP work budget for batch I/O acceleration])
+AC_DEFINE(OPP_CTRL_PLANE_RELAX,    0,  [OPP control-plane relax factor (power of 2)])
+AC_DEFINE(OPP_MATCH_POOL_SIZE,     16,  [OPP size of pool for small TLV node])
+AC_DEFINE(OPP_MATCH_VALUE_SIZE,    16,  [OPP size of TLV value])
+AC_DEFINE(OPP_HMAP_INIT_SIZE,      8,   [OPP size of init hmap])
+AC_DEFINE(OPP_STATE_FLUSH_INTERVAL,60,  [OPP state table flush interval (in seconds)])
+AC_DEFINE(OPP_STATE_NOTIFICATIONS, 0,   [OPP state notifications])
 
 
 #OFP_CHECK_LINUX(l26, 2.6, KBLD26, KSRC26, L26_ENABLED)

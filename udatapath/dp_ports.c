@@ -297,9 +297,9 @@ dp_ports_run(struct datapath *dp, int nrun) {
         }
 #endif
 
-	for(x = 0; x < BEBA_WORK_BUDGET; x++)
+	for(x = 0; x < OPP_WORK_BUDGET; x++)
 	{
-#if BEBA_USE_LIBPCAP_ZEROCOPY
+#if OPP_USE_LIBPCAP_ZEROCOPY
 	    ofpbuf_emplace(&buffer, 0, 0);
 #else
 	    /* Emplace a buffer with some headroom to add headers in forwarding

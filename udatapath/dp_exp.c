@@ -41,11 +41,11 @@
 #include "oflib/ofl-messages.h"
 #include "oflib-exp/ofl-exp-openflow.h"
 #include "oflib-exp/ofl-exp-nicira.h"
-#include "oflib-exp/ofl-exp-beba.h"
+#include "oflib-exp/ofl-exp-opp.h"
 #include "openflow/openflow.h"
 #include "openflow/openflow-ext.h"
 #include "openflow/nicira-ext.h"
-#include "openflow/beba-ext.h"
+#include "openflow/opp-ext.h"
 #include "vlog.h"
 #include "pipeline.h"
 #include <sys/time.h>
@@ -58,11 +58,11 @@ static struct vlog_rate_limit rl = VLOG_RATE_LIMIT_INIT(60, 60);
 
 void
 dp_exp_action(struct packet *pkt, struct ofl_action_experimenter *act) {
-    if(act->experimenter_id == BEBA_VENDOR_ID)
+    if(act->experimenter_id == OPP_VENDOR_ID)
     {
-        struct ofl_exp_beba_act_header *action;
+        struct ofl_exp_opp_act_header *action;
         struct ofl_exp_msg_notify_state_change ntf_message;
-        action = (struct ofl_exp_beba_act_header *) act;
+        action = (struct ofl_exp_opp_act_header *) act;
         switch(action->act_type){
             case(OFPAT_EXP_SET_STATE):
             {
@@ -75,7 +75,7 @@ dp_exp_action(struct packet *pkt, struct ofl_action_experimenter *act) {
                     // This invocation occurs when a state transition happens due to a dynamic event (e.g., a newly received packet).
                     state_table_set_state(st, pkt, NULL, wns, &ntf_message);
                     // FIXME: Sending this notification synchronously, potentially for each packet, is too expensive.
-                    #if BEBA_STATE_NOTIFICATIONS != 0
+                    #if OPP_STATE_NOTIFICATIONS != 0
                      memset(&ntf_message, 0, sizeof(struct ofl_exp_msg_notify_state_change));
                      if (ntf_message.old_state != ntf_message.new_state) {
                         int err = dp_send_message(pkt->dp, (struct ofl_msg_header *)&ntf_message, NULL);
@@ -160,12 +160,12 @@ dp_exp_action(struct packet *pkt, struct ofl_action_experimenter *act) {
 void
 dp_exp_inst(struct packet *pkt UNUSED, struct ofl_instruction_experimenter *inst) {
 	switch (inst->experimenter_id) {
-		case (BEBA_VENDOR_ID): {
-			struct ofl_exp_beba_instr_header *beba_inst = (struct ofl_exp_beba_instr_header*) inst;
-			switch (beba_inst->instr_type) {
+		case (OPP_VENDOR_ID): {
+			struct ofl_exp_opp_instr_header *opp_inst = (struct ofl_exp_opp_instr_header*) inst;
+			switch (opp_inst->instr_type) {
 				case (OFPIT_IN_SWITCH_PKT_GEN): {
-					struct ofl_exp_instruction_in_switch_pkt_gen *beba_insw_i =
-							(struct ofl_exp_instruction_in_switch_pkt_gen *) beba_inst;
+					struct ofl_exp_instruction_in_switch_pkt_gen *opp_insw_i =
+							(struct ofl_exp_instruction_in_switch_pkt_gen *) opp_inst;
 					struct pkttmp_table *t = pkt->dp->pkttmps;
 					struct pkttmp_entry *pkttmp;
 					uint8_t found = 0;
@@ -173,7 +173,7 @@ dp_exp_inst(struct packet *pkt UNUSED, struct ofl_instruction_experimenter *inst
 					struct packet *gen_pkt;
 
 					HMAP_FOR_EACH_WITH_HASH(pkttmp, struct pkttmp_entry, node,
-							beba_insw_i->pkttmp_id, &t->entries) {
+							opp_insw_i->pkttmp_id, &t->entries) {
 
 						uint8_t *data;
 
@@ -187,7 +187,7 @@ dp_exp_inst(struct packet *pkt UNUSED, struct ofl_instruction_experimenter *inst
 						if (!pkttmp->data_length){
 							VLOG_WARN_RL(LOG_MODULE, &rl,
 									"No packet data associated with pkttmp_id %u!",
-									beba_insw_i->pkttmp_id);
+									opp_insw_i->pkttmp_id);
 							return;
 						}
 
@@ -208,22 +208,22 @@ dp_exp_inst(struct packet *pkt UNUSED, struct ofl_instruction_experimenter *inst
 						if (gen_pkt == NULL) {
 							VLOG_WARN_RL(LOG_MODULE, &rl,
 									"No packet data associated with pkttmp_id %u!",
-									beba_insw_i->pkttmp_id);
+									opp_insw_i->pkttmp_id);
 							return;
 						}
 						// ---
 
 						// The pkt generation never leads to a PACKET_IN message,
 						// thus, the cookie value is not required and set to 0
-						dp_execute_action_list(gen_pkt, beba_insw_i->actions_num,
-								beba_insw_i->actions, 0);
+						dp_execute_action_list(gen_pkt, opp_insw_i->actions_num,
+								opp_insw_i->actions, 0);
 						if(gen_pkt) {
 							packet_destroy(gen_pkt);
 						}
 					}
 
 					if (!found) {
-						VLOG_WARN_RL(LOG_MODULE, &rl, "No PKTTMP for pkttmp_id %u!", beba_insw_i->pkttmp_id);
+						VLOG_WARN_RL(LOG_MODULE, &rl, "No PKTTMP for pkttmp_id %u!", opp_insw_i->pkttmp_id);
 					}
 					return;
 
@@ -232,7 +232,7 @@ dp_exp_inst(struct packet *pkt UNUSED, struct ofl_instruction_experimenter *inst
 
 
 			// TODO Perform packet generation instruction
-			VLOG_WARN_RL(LOG_MODULE, &rl, "Unknown BEBA instruction type!");
+			VLOG_WARN_RL(LOG_MODULE, &rl, "Unknown OPP instruction type!");
 			return;
 		}
 		default: {
@@ -246,8 +246,8 @@ ofl_err
 dp_exp_stats(struct datapath *dp UNUSED, struct ofl_msg_multipart_request_experimenter *msg, const struct sender *sender UNUSED) {
     ofl_err err;
     switch (msg->experimenter_id) {
-        case (BEBA_VENDOR_ID): {
-            struct ofl_exp_beba_msg_multipart_request *exp = (struct ofl_exp_beba_msg_multipart_request *)msg;
+        case (OPP_VENDOR_ID): {
+            struct ofl_exp_opp_msg_multipart_request *exp = (struct ofl_exp_opp_msg_multipart_request *)msg;
 
             switch(exp->type) {
                 case (OFPMP_EXP_STATE_STATS_AND_DELETE):
@@ -318,8 +318,8 @@ dp_exp_message(struct datapath *dp, struct ofl_msg_experimenter *msg, const stru
                 }
             }
         }
-        case (BEBA_VENDOR_ID): {
-            struct ofl_exp_beba_msg_header *exp = (struct ofl_exp_beba_msg_header *)msg;
+        case (OPP_VENDOR_ID): {
+            struct ofl_exp_opp_msg_header *exp = (struct ofl_exp_opp_msg_header *)msg;
             struct ofl_exp_msg_notify_state_change ntf_message;
             int error;
 
@@ -331,7 +331,7 @@ dp_exp_message(struct datapath *dp, struct ofl_msg_experimenter *msg, const stru
                     // after the handle_state_mod call.
                     error = handle_state_mod(dp->pipeline, (struct ofl_exp_msg_state_mod *)msg, sender, &ntf_message);
                     if (!error) {
-                        ofl_exp_beba_msg_free((struct ofl_msg_experimenter *) msg);
+                        ofl_exp_opp_msg_free((struct ofl_msg_experimenter *) msg);
                     }
 
                     return error;

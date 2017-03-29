@@ -42,8 +42,8 @@ void
 hmap_init(struct hmap *hmap)
 {
     hmap->buckets = hmap->cache;
-    memset(hmap->cache, 0, sizeof(void *)*BEBA_HMAP_INIT_SIZE);
-    hmap->mask = BEBA_HMAP_INIT_SIZE-1;
+    memset(hmap->cache, 0, sizeof(void *)*OPP_HMAP_INIT_SIZE);
+    hmap->mask = OPP_HMAP_INIT_SIZE-1;
     hmap->n = 0;
 }
 

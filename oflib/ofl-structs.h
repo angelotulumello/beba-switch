@@ -243,7 +243,7 @@ struct ofl_match_small_tlv {
     uint32_t header;							/* TLV header */
     bool	 ownership;							/* = false (memory is not to be released) */
     uint8_t *value;								/* TLV value ptr */
-    uint8_t _storage[BEBA_MATCH_VALUE_SIZE];	/* TLV value size */
+    uint8_t _storage[OPP_MATCH_VALUE_SIZE];	/* TLV value size */
 };
 
 
@@ -251,7 +251,7 @@ struct ofl_match {
     struct ofl_match_header   header; /* Match header */
     struct hmap match_fields;         /* Match fields. Contain OXM TLV's  */
 
-    struct ofl_match_small_tlv pool[BEBA_MATCH_POOL_SIZE];
+    struct ofl_match_small_tlv pool[OPP_MATCH_POOL_SIZE];
     size_t pool_size;
     bool   dirty;
 };
@@ -429,7 +429,7 @@ ofl_alloc_match_tlv(struct ofl_match *match, size_t size)
 {
 	struct ofl_match_small_tlv *s;
 
-	if (unlikely(match->pool_size >= BEBA_MATCH_POOL_SIZE /* pool exhausted */ || size > BEBA_MATCH_VALUE_SIZE)) {
+	if (unlikely(match->pool_size >= OPP_MATCH_POOL_SIZE /* pool exhausted */ || size > OPP_MATCH_VALUE_SIZE)) {
 		struct ofl_match_tlv *m = malloc(sizeof (struct ofl_match_tlv));
 		m->value = malloc(size);
 		m->ownership = true;

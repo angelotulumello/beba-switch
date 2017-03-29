@@ -90,6 +90,6 @@ char *
 ofl_exp_openflow_act_to_string(struct ofl_action_header const *act);
 
 void
-ofl_error_beba_exp_type_print(FILE *stream, uint16_t exp_type);
+ofl_error_opp_exp_type_print(FILE *stream, uint16_t exp_type);
 
 #endif /* OFL_EXP_OPENFLOW_H */

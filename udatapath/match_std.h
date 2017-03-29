@@ -34,7 +34,7 @@
 
 #include <stdbool.h>
 #include "oflib/ofl-structs.h"
-#include "openflow/beba-ext.h"
+#include "openflow/opp-ext.h"
 
 /****************************************************************************
  * Functions for comparing two extended match structures.

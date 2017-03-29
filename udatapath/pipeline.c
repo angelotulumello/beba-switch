@@ -52,7 +52,7 @@
 #include "oflib/oxm-match.h"
 #include "vlog.h"
 #include "dp_capabilities.h"
-#include "oflib-exp/ofl-exp-beba.h"
+#include "oflib-exp/ofl-exp-opp.h"
 
 #define LOG_MODULE VLM_pipeline
 
@@ -172,7 +172,7 @@ pipeline_process_packet(struct pipeline *pl, struct packet *pkt)
         table = next_table;
         next_table = NULL;
 
-        /* BEBA EXTENSION BEGIN */
+        /* OPP EXTENSION BEGIN */
 
         if (state_table_is_enabled(table->state_table)) {
             struct state_entry *state_entry;
@@ -231,7 +231,7 @@ pipeline_process_packet(struct pipeline *pl, struct packet *pkt)
             // hint: don't touch the packet, avoid installing flowmods that match on state.
         }
 
-        /* BEBA EXTENSION END */
+        /* OPP EXTENSION END */
 
         if (VLOG_IS_DBG_ENABLED(LOG_MODULE)) {
             char *m = ofl_structs_match_to_string((struct ofl_match_header *) &(pkt->handle_std.match), pkt->dp->exp);
@@ -294,7 +294,7 @@ send_flow_notification(struct datapath *dp, struct ofl_msg_flow_mod *msg,const s
 
     /* Flow Mod Sync: Notification is sent to acknowledge a flow modification */
     struct ofl_exp_msg_notify_flow_change ntf = {{{{.type = OFPT_EXPERIMENTER},
-                                                   .experimenter_id = BEBA_VENDOR_ID},
+                                                   .experimenter_id = OPP_VENDOR_ID},
                                                    .type = OFPT_EXP_FLOW_NOTIFICATION},
                                                    .table_id = msg->table_id,
                                                    .ntf_type = OFPT_FLOW_MOD,

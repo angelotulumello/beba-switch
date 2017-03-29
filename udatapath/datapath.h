@@ -50,7 +50,7 @@
 #include "oflib/ofl-messages.h"
 #include "oflib/ofl-structs.h"
 #include "oflib-exp/ofl-exp-nicira.h"
-#include "oflib-exp/ofl-exp-beba.h"
+#include "oflib-exp/ofl-exp-opp.h"
 #include "group_table.h"
 #include "timeval.h"
 #include "list.h"
@@ -64,7 +64,7 @@ struct sender;
  * The datapath
  ****************************************************************************/
 
-#define DP_RELAX_FACTOR_MASK	((1UL << BEBA_CTRL_PLANE_RELAX)-1)
+#define DP_RELAX_FACTOR_MASK	((1UL << OPP_CTRL_PLANE_RELAX)-1)
 #define DP_RELAX_WITH(n)	if ((n & DP_RELAX_FACTOR_MASK)== 0)
 
 struct datapath
