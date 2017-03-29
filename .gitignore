@@ -64,7 +64,7 @@ oflib-exp/liboflib_exp.a
 oflib-exp/ofl-exp-nicira.o
 oflib-exp/ofl-exp-openflow.o
 oflib-exp/ofl-exp.o
-oflib-exp/ofl-exp-beba.o
+oflib-exp/ofl-exp-opp.o
 oflib/.deps/
 oflib/.dirstamp
 oflib/liboflib.a
