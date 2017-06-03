@@ -18,6 +18,7 @@
 #include "lib/ofp.h"
 #include "lib/ofpbuf.h"
 #include "timeval.h"
+#include "oflib/ofl.h"
 
 
 #define LOG_MODULE ofl_exp_os
@@ -2038,8 +2039,29 @@ ofl_error_beba_exp_type_print(FILE *stream, uint16_t exp_type) {
     }
 }
 
+struct ofl_exp *
+ofl_exp_callbacks() {
+    struct ofl_exp *exp = malloc(sizeof(struct ofl_exp));
+    struct ofl_exp_act *exp_act = malloc(sizeof(struct ofl_exp_act));
+
+    exp_act->pack      = ofl_exp_beba_act_pack;
+    exp_act->unpack    = ofl_exp_beba_act_unpack;
+    exp_act->free      = ofl_exp_beba_act_free;
+    exp_act->ofp_len   = ofl_exp_beba_act_ofp_len;
+    exp_act->to_string = ofl_exp_beba_act_to_string;
+
+    exp->act = exp_act;
+    exp->inst = NULL;
+    exp->match = NULL;
+    exp->stats = NULL;
+    exp->msg = NULL;
+    exp->field = NULL;
+    exp->err = NULL;
+
+    return exp;
+}
+
 /* Instruction expertimenter callback implementation */
-//TODO implement callbacks
 int
 ofl_exp_beba_inst_pack(struct ofl_instruction_header const *src, struct ofp_instruction *dst) {
 
@@ -2056,9 +2078,10 @@ ofl_exp_beba_inst_pack(struct ofl_instruction_header const *src, struct ofp_inst
             struct ofl_exp_instruction_in_switch_pkt_gen *si = (struct ofl_exp_instruction_in_switch_pkt_gen *) src;
             struct ofp_exp_instruction_in_switch_pkt_gen *di = (struct ofp_exp_instruction_in_switch_pkt_gen *) dst;
 
+            struct ofl_exp *exp_cb = (struct ofl_exp *) ofl_exp_callbacks();
+            
             OFL_LOG_DBG(LOG_MODULE, "ofl_exp_beba_inst_pack OFPIT_IN_SWITCH_PKT_GEN");
 
-            //TODO may need to pass callbacks instead of NULL
             total_len = sizeof(struct ofp_exp_instruction_in_switch_pkt_gen) +
                         ofl_actions_ofp_total_len((struct ofl_action_header const **) si->actions, si->actions_num,
                                                   NULL);
@@ -2075,10 +2098,10 @@ ofl_exp_beba_inst_pack(struct ofl_instruction_header const *src, struct ofp_inst
             data = (uint8_t *) dst + sizeof(struct ofp_exp_instruction_in_switch_pkt_gen);
 
             for (i = 0; i < si->actions_num; i++) {
-                //TODO may need to pass callbacks instead of NULL
-                len = ofl_actions_pack(si->actions[i], (struct ofp_action_header *) data, data, NULL);
+                len = ofl_actions_pack(si->actions[i], (struct ofp_action_header *) data, data, exp_cb);
                 data += len;
             }
+            free(exp_cb);
             return total_len;
         }
         default:
@@ -2120,6 +2143,8 @@ ofl_exp_beba_inst_unpack(struct ofp_instruction const *src, size_t *len, struct 
             struct ofp_action_header *act;
             size_t i;
 
+            struct ofl_exp *exp_cb = (struct ofl_exp *) ofl_exp_callbacks();
+
             di = (struct ofl_exp_instruction_in_switch_pkt_gen *) malloc(
                     sizeof(struct ofl_exp_instruction_in_switch_pkt_gen));
             di->header.header.experimenter_id = ntohl(exp->experimenter); //BEBA_VENDOR_ID
@@ -2146,15 +2171,13 @@ ofl_exp_beba_inst_unpack(struct ofp_instruction const *src, size_t *len, struct 
 
             act = si->actions;
             for (i = 0; i < di->actions_num; i++) {
-                // TODO We may need to pass the ofl_exp callbacks instead of NULL
-                //error = ofl_actions_unpack(act, &ilen, &(di->actions[i]), exp);
-                error = ofl_actions_unpack(act, &ilen, &(di->actions[i]), NULL);
+                error = ofl_actions_unpack(act, &ilen, &(di->actions[i]), exp_cb);
                 if (error) {
                     break;
                 }
                 act = (struct ofp_action_header *) ((uint8_t *) act + ntohs(act->len));
             }
-
+            free(exp_cb);
             break;
         }
         default: {
@@ -2191,10 +2214,13 @@ ofl_exp_beba_inst_free(struct ofl_instruction_header *i) {
         case (OFPIT_IN_SWITCH_PKT_GEN): {
             OFL_LOG_DBG(LOG_MODULE, "Freeing BEBA instruction IN_SWITCH_PKT_GEN.");
             instr = (struct ofl_exp_instruction_in_switch_pkt_gen *) ext;
-            // TODO We may need to use OFL_UTILS_FREE_ARR_FUN2 and pass the ofl_exp callbacks instead of NULL
+
+            struct ofl_exp *exp_cb = (struct ofl_exp *) ofl_exp_callbacks();
+
             OFL_UTILS_FREE_ARR_FUN2(instr->actions, instr->actions_num,
-                                    ofl_actions_free, NULL);
+                                    ofl_actions_free, exp_cb);
             free(instr);
+            free(exp_cb);
             OFL_LOG_DBG(LOG_MODULE, "Done.");
             return 0;
             break;
@@ -2216,12 +2242,14 @@ ofl_exp_beba_inst_ofp_len(struct ofl_instruction_header const *i) {
         case OFPIT_IN_SWITCH_PKT_GEN: {
             struct ofl_exp_instruction_in_switch_pkt_gen *i = (struct ofl_exp_instruction_in_switch_pkt_gen *) ext;
             OFL_LOG_DBG(LOG_MODULE, "ofl_exp_beba_inst_ofp_len");
-            // TODO We may need to pass the ofl_exp callbacks instead of NULL
-//              return sizeof(struct ofl_exp_beba_instr_header)
-//                      + ofl_actions_ofp_total_len(i->actions, i->actions_num, exp);
-            return sizeof(struct ofp_exp_instruction_in_switch_pkt_gen)
+
+            struct ofl_exp *exp_cb = (struct ofl_exp *) ofl_exp_callbacks();
+            
+            size_t s = sizeof(struct ofp_exp_instruction_in_switch_pkt_gen)
                    +
-                   ofl_actions_ofp_total_len((struct ofl_action_header const **) i->actions, i->actions_num, NULL);
+                   ofl_actions_ofp_total_len((struct ofl_action_header const **) i->actions, i->actions_num, exp_cb);
+            free(exp_cb);
+            return s;
         }
         default:
             OFL_LOG_WARN(LOG_MODULE, "Trying to len unknown BEBA instruction type.");
