@@ -208,6 +208,10 @@ dp_exp_inst(struct packet *pkt UNUSED, struct ofl_instruction_experimenter *inst
 						//Required to enable submission to the pipeline when
 						//there is an action output with port number TABLE
 						gen_pkt->packet_out = true;
+                        //Generated packet must have the same table_id of the packet
+                        //the instruction is associated to.
+                        //Required for actions that need context information
+                        gen_pkt->table_id = pkt->table_id;
 
 						if (gen_pkt == NULL) {
 							VLOG_WARN_RL(LOG_MODULE, &rl,
