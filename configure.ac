@@ -75,7 +75,7 @@ fi
 # BEBA options
 
 AC_DEFINE(BEBA_STATE_ENABLED,       1,   [BEBA stateful processing enabled])
-AC_DEFINE(BEBA_STATE_FLUSH_INTERVAL,60,  [BEBA state table flush interval (in seconds)])
+AC_DEFINE(BEBA_STATE_FLUSH_INTERVAL,1,   [BEBA state table flush interval (in seconds)])
 AC_DEFINE(BEBA_STATE_NOTIFICATIONS, 0,   [BEBA state notifications enable])
 AC_DEFINE(BEBA_USE_LIBPCAP,         1,   [BEBA pcap packet I/O acceleration])
 AC_DEFINE(BEBA_USE_LIBPCAP_ZEROCOPY,1,   [BEBA zero-copy using pcap buffers])
