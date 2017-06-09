@@ -202,7 +202,7 @@ enum ofp_exp_beba_errors{
 #define OFPSC_MAX_KEY_LEN 48
 #define OFPSC_MAX_HEADER_FIELDS 8
 #define OFPSC_MAX_CONDITIONS_NUM 8
-#define OFPSC_MAX_FLOW_DATA_VAR_NUM 6
+#define OFPSC_MAX_FLOW_DATA_VAR_NUM 8
 #define OFPSC_MAX_GLOBAL_DATA_VAR_NUM 8
 #define MULTIPLY_FACTOR 1000 // used for OPCODE_AVG, OPCODE_VAR and OPCODE_EWMA
 
@@ -419,7 +419,7 @@ struct ofp_exp_state_entry{
     uint32_t            state;
     uint32_t            flow_data_var[OFPSC_MAX_FLOW_DATA_VAR_NUM]; //TODO Davide: use flexible arrays to save space
 };
-OFP_ASSERT(sizeof(struct ofp_exp_state_entry) == 80);
+OFP_ASSERT(sizeof(struct ofp_exp_state_entry) == 88);
 
 /* Body for ofp_multipart_request of type OFPMP_EXP_STATE_STATS. */
 struct ofp_exp_state_stats_request {
@@ -453,7 +453,7 @@ struct ofp_exp_state_stats {
     uint32_t hard_timeout; // [us]
     uint32_t idle_timeout; // [us]
 };
-OFP_ASSERT(sizeof(struct ofp_exp_state_stats) == 136);
+OFP_ASSERT(sizeof(struct ofp_exp_state_stats) == 144);
 
 /****************************************************************
  *
