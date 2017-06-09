@@ -347,6 +347,12 @@ int packet_parse(struct packet const *pkt, struct ofl_match *m, struct protocols
             ofl_structs_match_put16(m, OXM_OF_UDP_DST,
                                                 ntohs(proto->udp->udp_dst));
 
+            if (ntohs(proto->udp->udp_dst) == 2152) {  // gtp default udp port
+                offset += 4; 
+                uint32_t *teid = (uint32_t *)((uint8_t const *) pkt->buffer->data + offset);
+                ofl_structs_match_put64(m, OXM_OF_TUNNEL_ID, (uint64_t) ntohl(*teid));
+            }
+        
             return 0;
 
         }
@@ -542,7 +548,8 @@ packet_handle_std_validate(struct packet_handle_std *handle) {
 #endif
     /*Add metadata  and tunnel_id value to the hash_map */
     ofl_structs_match_put64(&handle->match,  OXM_OF_METADATA, metadata);
-    ofl_structs_match_put64(&handle->match,  OXM_OF_TUNNEL_ID, tunnel_id);
+    /* Tunnel id is inserted only if a packet is gtp encapsulated*/
+    //ofl_structs_match_put64(&handle->match,  OXM_OF_TUNNEL_ID, tunnel_id); 
 }
 
 
