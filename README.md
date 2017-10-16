@@ -41,6 +41,10 @@ Run the following commands in the `beba-switch` directory to build and install e
 
 Please refer to the [original CPqD's softswitch README][ofss13-readme]
 
+## Pre-configured VM
+
+A pre-configured VM with the environment already set up can be downloaded [here][pre-configured-vm].
+
 # Contribute
 Please submit your bug reports, fixes and suggestions as pull requests on
 GitHub, or by contacting us directly.
@@ -55,3 +59,4 @@ code from the original Stanford switch).
 [ofss13]: http://cpqd.github.io/ofsoftswitch13/
 [ofss13-readme]: https://github.com/CPqD/ofsoftswitch13/blob/master/README.md
 [compileubuntu14]: http://tocai.dia.uniroma3.it/compunet-wiki/index.php/Installing_and_setting_up_OpenFlow_tools
+[pre-configured-vm]: https://mega.nz/#!0Q9wTAyD!rUfJVawVm1U5B28UFAMRpIXIPYXqzfm8-yLbUkLSYKY
