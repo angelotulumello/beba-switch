@@ -1037,6 +1037,38 @@ ofl_exp_beba_act_unpack(struct ofp_action_header const *src, size_t *len, struct
             *len -= sizeof(struct ofp_exp_action_write_context_to_field);
             break;
         }
+        case (OFPAT_EXP_DECAPSULATE_GTP):
+        {
+            struct ofp_exp_action_decapsulate_gtp *sa;
+            struct ofl_exp_action_decapsulate_gtp *da;
+
+            sa = (struct ofp_exp_action_decapsulate_gtp *) ext;
+            da = (struct ofl_exp_action_decapsulate_gtp *) malloc(sizeof(struct ofl_exp_action_decapsulate_gtp));
+            da->header.header.experimenter_id = ntohl(exp->experimenter);
+            da->header.act_type = ntohl(ext->act_type);
+            *dst = (struct ofl_action_header *)da;
+            // TODO: error handling
+
+            *len -= sizeof(struct ofp_exp_action_decapsulate_gtp);
+            break;
+        }
+        case (OFPAT_EXP_ENCAPSULATE_GTP):
+        {
+            struct ofp_exp_action_encapsulate_gtp *sa;
+            struct ofl_exp_action_encapsulate_gtp *da;
+
+            sa = (struct ofp_exp_action_encapsulate_gtp *) ext;
+            da = (struct ofl_exp_action_encapsulate_gtp *) malloc(sizeof(struct ofl_exp_action_encapsulate_gtp));
+            da->header.header.experimenter_id = ntohl(exp->experimenter);
+            da->header.act_type = ntohl(ext->act_type);
+            *dst = (struct ofl_action_header *)da;
+
+            // TODO: error handling
+            da->pkttmp_id = ntohl(sa->pkttmp_id);
+            
+            *len -= sizeof(struct ofp_exp_action_encapsulate_gtp);
+            break;
+        }
         default:
         {
             struct ofl_action_experimenter *da;
@@ -1167,6 +1199,33 @@ ofl_exp_beba_act_pack(struct ofl_action_header const *src, struct ofp_action_hea
 
             return sizeof(struct ofp_exp_action_write_context_to_field);
         }
+        case (OFPAT_EXP_DECAPSULATE_GTP):
+        {
+            struct ofl_exp_action_decapsulate_gtp *sa = (struct ofl_exp_action_decapsulate_gtp *) ext;
+            struct ofp_exp_action_decapsulate_gtp *da = (struct ofp_exp_action_decapsulate_gtp *) dst;
+
+            da->header.header.experimenter = htonl(exp->experimenter_id);
+            da->header.act_type = htonl(ext->act_type);
+
+            dst->len = htons(sizeof(struct ofp_exp_action_decapsulate_gtp));
+
+            return sizeof(struct ofp_exp_action_decapsulate_gtp);
+        }
+        case (OFPAT_EXP_ENCAPSULATE_GTP):
+        {
+            struct ofl_exp_action_encapsulate_gtp *sa = (struct ofl_exp_action_encapsulate_gtp *) ext;
+            struct ofp_exp_action_encapsulate_gtp *da = (struct ofp_exp_action_encapsulate_gtp *) dst;
+
+            da->header.header.experimenter = htonl(exp->experimenter_id);
+            da->header.act_type = htonl(ext->act_type);
+            memset(da->pad, 0x00, 4);
+
+            da->pkttmp_id = htonl(sa->pkttmp_id);
+
+            dst->len = htons(sizeof(struct ofp_exp_action_encapsulate_gtp));
+
+            return sizeof(struct ofp_exp_action_encapsulate_gtp);
+        }
         default:
             return 0;
     }
@@ -1196,6 +1255,10 @@ ofl_exp_beba_act_ofp_len(struct ofl_action_header const *act)
         }
         case (OFPAT_EXP_WRITE_CONTEXT_TO_FIELD):
             return sizeof(struct ofp_exp_action_write_context_to_field);
+        case (OFPAT_EXP_DECAPSULATE_GTP):
+            return sizeof(struct ofp_exp_action_decapsulate_gtp);
+        case (OFPAT_EXP_ENCAPSULATE_GTP):
+            return sizeof(struct ofp_exp_action_encapsulate_gtp);
         default:
             return 0;
     }
@@ -1333,7 +1396,11 @@ ofl_exp_beba_act_to_string(struct ofl_action_header const *act)
             sprintf(string + strlen(string), "\"]}");
             return string;
         }
-
+        case (OFPAT_EXP_DECAPSULATE_GTP):
+            return "{decapsulate_gtp()}";
+        case (OFPAT_EXP_ENCAPSULATE_GTP):
+            return "{encapsulate_gtp()}";
+        
     }
     return NULL;
 }
@@ -1366,6 +1433,18 @@ ofl_exp_beba_act_free(struct ofl_action_header *act) {
         case (OFPAT_EXP_WRITE_CONTEXT_TO_FIELD):
         {
             struct ofl_exp_action_write_context_to_field *a = (struct ofl_exp_action_write_context_to_field *)ext;
+            free(a);
+            break;
+        }
+        case (OFPAT_EXP_DECAPSULATE_GTP):
+        {
+            struct ofl_exp_action_decapsulate_gtp *a = (struct ofl_exp_action_decapsulate_gtp *)ext;
+            free(a);
+            break;
+        }
+        case (OFPAT_EXP_ENCAPSULATE_GTP):
+        {
+            struct ofl_exp_action_encapsulate_gtp *a = (struct ofl_exp_action_encapsulate_gtp *)ext;
             free(a);
             break;
         }
@@ -3538,6 +3617,104 @@ struct ofl_action_set_field * state_table_write_context_to_field(struct state_ta
     }
     
     return set_field_act;
+}
+
+ofl_err
+state_table_decapsulate_gtp(struct ofl_exp_action_decapsulate_gtp *act, struct packet *pkt) {
+    //packet_handle_std_validate(&pkt->handle_std);
+    if (pkt->handle_std.proto.eth != NULL) {
+        struct eth_header *eth = pkt->handle_std.proto.eth;
+        //struct snap_header *eth_snap = pkt->handle_std.proto.eth_snap;
+        uint16_t next_proto;
+
+        size_t move_size = IP_HEADER_LEN + UDP_HEADER_LEN + 8; //gtp header len = 8
+
+        if (eth->eth_type == ETH_TYPE_IP){
+            next_proto = pkt->handle_std.proto.ipv4->ip_proto;
+        } else if (eth->eth_type == ETH_TYPE_IPV6){
+            next_proto = pkt->handle_std.proto.ipv6->ipv6_next_hd;
+        } else {
+            // error
+        }
+
+        if (!next_proto == IPPROTO_UDP){
+            // it's not gtp encap
+        } else {
+            uint16_t dst_port = pkt->handle_std.proto.udp->udp_dst;
+            if (htons(dst_port) != 2152){
+
+            } //not gtp encap
+
+            else {
+                pkt->buffer->data = (uint8_t *)pkt->buffer->data + move_size;
+                pkt->buffer->size -= move_size;
+
+                memmove(pkt->buffer->data, eth, ETH_HEADER_LEN); //eth header len
+
+                pkt->handle_std.valid = false;
+            }
+        }
+    } else {
+        //VLOG_WARN_RL(LOG_MODULE, &rl, "Trying to execute GTP_DECAP action on packet with no eth.");
+    }
+
+    return 0;
+}
+
+ofl_err
+state_table_encapsulate_gtp(struct ofl_exp_action_encapsulate_gtp *act, struct packet *pkt){
+    if (pkt->handle_std.proto.eth != NULL){
+        size_t encap_size = IP_HEADER_LEN + UDP_HEADER_LEN + 8;
+        struct pkttmp_table *t = pkt->dp->pkttmps;
+        struct pkttmp_entry *pkttmp;
+        uint8_t found = 0;
+        struct eth_header *eth = pkt->handle_std.proto.eth;
+
+        /*if (ofpbuf_headroom(pkt->buffer) >= encap_size) {
+            pkt->buffer->data = (uint8_t *)(pkt->buffer->data) - encap_size;
+            pkt->buffer->size += encap_size;
+
+            fprintf(stderr, "headroom: %zu\n", ofpbuf_headroom(pkt->buffer));
+
+            memmove(pkt->buffer->data, eth, ETH_HEADER_LEN); //move backwards eth
+
+        } else { */ //tailroom
+            ofpbuf_put_uninit(pkt->buffer, encap_size);
+
+            memmove((uint8_t *) pkt->buffer->data + encap_size + ETH_HEADER_LEN,
+                    (uint8_t *) pkt->buffer->data + ETH_HEADER_LEN,
+                    pkt->buffer->size - ETH_HEADER_LEN);
+        //}
+
+        fprintf(stderr, "pkttmp_id: %u\n", act->pkttmp_id);
+        HMAP_FOR_EACH_WITH_HASH(pkttmp, struct pkttmp_entry, node,
+                                    act->pkttmp_id, &t->entries) 
+        {
+            found = 1;
+
+            memcpy(pkt->buffer->data + ETH_HEADER_LEN, pkttmp->data, encap_size);
+        }
+        if (!found) {
+            return -1; //error
+        }
+
+        struct ip_header *ipv4 = (struct ip_header *)((uint8_t const *) pkt->buffer->data + ETH_HEADER_LEN);
+        struct udp_header *udp = (struct udp_header *)((uint8_t const *) ipv4 + IP_HEADER_LEN);
+
+        ipv4->ip_tot_len = htons(pkt->buffer->size - ETH_HEADER_LEN);
+        udp->udp_len = htons(pkt->buffer->size - ETH_HEADER_LEN - IP_HEADER_LEN);
+
+        uint8_t *gtp_message_type = (uint8_t const *) pkt->buffer->data + ETH_HEADER_LEN + IP_HEADER_LEN + UDP_HEADER_LEN + 1;
+        *gtp_message_type = 0xff;
+
+        uint16_t *gtp_len = (uint8_t const *) pkt->buffer->data + ETH_HEADER_LEN + IP_HEADER_LEN + UDP_HEADER_LEN + 1 + 1;
+        *gtp_len = htons(pkt->buffer->size - ETH_HEADER_LEN - encap_size);
+
+
+    } else {
+        // error no eth in pkt
+    }
+    return 0;
 }
 
 /*

@@ -158,7 +158,10 @@ ofl_exp_act_pack(struct ofl_action_header const *src, struct ofp_action_header *
 
     switch (exp->experimenter_id) {
         case (BEBA_VENDOR_ID): {
-            return ofl_exp_beba_act_pack(src,dst);
+            fprintf(stderr, "pre act pack\n");
+            int pack = ofl_exp_beba_act_pack(src,dst);
+            fprintf(stderr, "post act pack\n");
+            return pack;
         }
         default: {
             return ofl_error(OFPET_BAD_REQUEST, OFPBRC_BAD_EXPERIMENTER);

@@ -246,6 +246,15 @@ struct ofl_exp_action_write_context_to_field {
     uint32_t dst_field;
 };
 
+struct ofl_exp_action_encapsulate_gtp {
+    struct ofl_exp_beba_act_header header; /* OFPAT_EXP_ENCAPSULATE_GTP */
+    uint32_t pkttmp_id;
+};
+
+struct ofl_exp_action_decapsulate_gtp {
+    struct ofl_exp_beba_act_header header; /* OFPAT_EXP_DECAPSULATE_GTP */
+};
+
 /*************************************************************************/
 /*                        experimenter state table						 */
 /*************************************************************************/
@@ -408,6 +417,12 @@ state_table_evaluate_condition(struct state_table *state_table,struct packet *pk
 
 struct ofl_action_set_field *
 state_table_write_context_to_field(struct state_table *table, struct ofl_exp_action_write_context_to_field *act, struct packet *pkt);
+
+ofl_err
+state_table_decapsulate_gtp(struct ofl_exp_action_decapsulate_gtp *act, struct packet *pkt);
+
+ofl_err
+state_table_encapsulate_gtp(struct ofl_exp_action_encapsulate_gtp *act, struct packet *pkt);
 
 ofl_err
 state_table_configure_stateful(struct state_table *table, uint8_t stateful);

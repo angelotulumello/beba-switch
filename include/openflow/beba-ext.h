@@ -64,7 +64,9 @@ enum ofp_exp_actions {
     OFPAT_EXP_SET_GLOBAL_STATE,
     OFPAT_EXP_INC_STATE,
     OFPAT_EXP_SET_DATA_VAR,
-    OFPAT_EXP_WRITE_CONTEXT_TO_FIELD
+    OFPAT_EXP_WRITE_CONTEXT_TO_FIELD,
+    OFPAT_EXP_DECAPSULATE_GTP,
+    OFPAT_EXP_ENCAPSULATE_GTP
 };
 
 struct ofp_beba_action_experimenter_header {
@@ -151,6 +153,21 @@ struct ofp_exp_action_write_context_to_field {
     uint32_t dst_field;   /* Align to 64-bits. */
 };
 OFP_ASSERT(sizeof(struct ofp_exp_action_write_context_to_field) == 24);
+
+/* Action structure for OFPAT_EXP_ENCAPSULATE_GTP */
+struct ofp_exp_action_encapsulate_gtp {
+    struct ofp_beba_action_experimenter_header header;
+    uint32_t pkttmp_id;
+    uint8_t pad[4];
+};
+OFP_ASSERT(sizeof(struct ofp_exp_action_encapsulate_gtp) == 24);
+
+/* Action structure for OFPAT_EXP_DECAPSULATE */
+struct ofp_exp_action_decapsulate_gtp {
+    struct ofp_beba_action_experimenter_header header;  /* we only need the action id */
+};
+OFP_ASSERT(sizeof(struct ofp_exp_action_decapsulate_gtp) == 16);
+
 
 /*EXPERIMENTER MESSAGES*/
 /*

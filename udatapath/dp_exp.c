@@ -139,6 +139,24 @@ dp_exp_action(struct packet *pkt, struct ofl_action_experimenter *act) {
                     }
                     break;
                 }
+                case (OFPAT_EXP_ENCAPSULATE_GTP): {
+                    packet_handle_std_validate(&pkt->handle_std);
+                    struct ofl_exp_action_encapsulate_gtp *act = (struct ofl_exp_action_encapsulate_gtp *) action;
+
+                    // TODO: error handling
+
+                    state_table_encapsulate_gtp(act, pkt);
+                    break;
+                }
+                case (OFPAT_EXP_DECAPSULATE_GTP): {
+                    packet_handle_std_validate(&pkt->handle_std);
+                    struct ofl_exp_action_decapsulate_gtp *act = (struct ofl_exp_action_decapsulate_gtp *) action;
+
+                    // TODO: error handling
+
+                    state_table_decapsulate_gtp(act, pkt);
+                    break;
+                }
                 default:
                     VLOG_WARN_RL(LOG_MODULE, &rl, "Trying to execute unknown BEBA experimenter action (%u).",
                                  htonl(action->act_type));

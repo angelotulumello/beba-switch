@@ -413,14 +413,18 @@ set_field(struct packet *pkt, struct ofl_action_set_field *act )
                 break;
             }
             case OXM_OF_TUNNEL_ID :{
-                struct  ofl_match_tlv *f;
+                /*struct  ofl_match_tlv *f;
                 HMAP_FOR_EACH_WITH_HASH(f, struct ofl_match_tlv,
                     hmap_node, hash_int(OXM_OF_TUNNEL_ID, 0), &(pkt)->handle_std.match.match_fields){
                     VLOG_DBG_RL(LOG_MODULE, &rl, "TUNNEL = %"PRIu64"\n", *f->value);
                     uint64_t *tunnel_id = (uint64_t*) f->value;
                     *tunnel_id = *((uint64_t*) act->field->value);
                     VLOG_DBG_RL(LOG_MODULE, &rl, "TUNNEL2 = %"PRIu64"\n", *f->value);
-                }
+                }*/
+                size_t len = ETH_HEADER_LEN + IP_HEADER_LEN + UDP_HEADER_LEN + 4;
+                // very, very hardcoded but does what it has to do
+                // occhio forse bisogna convertire il valore
+                memcpy((uint8_t *)pkt->buffer->data + len, act->field->value, 4);
                 break;
             }
             case OXM_OF_METADATA:{
