@@ -175,7 +175,6 @@ set_field(struct packet *pkt, struct ofl_action_set_field *act )
                     udp->udp_csum = recalc_csum32(udp->udp_csum,
                         ipv4->ip_src, *((uint32_t*) act->field->value));
                 }
-
                 ipv4->ip_csum = recalc_csum32(ipv4->ip_csum, ipv4->ip_src,
                                      *((uint32_t*) act->field->value));
 
@@ -424,7 +423,8 @@ set_field(struct packet *pkt, struct ofl_action_set_field *act )
                 size_t len = ETH_HEADER_LEN + IP_HEADER_LEN + UDP_HEADER_LEN + 4;
                 // very, very hardcoded but does what it has to do
                 // occhio forse bisogna convertire il valore
-                memcpy((uint8_t *)pkt->buffer->data + len, act->field->value, 4);
+                uint32_t val = htonl(*act->field->value);
+                memcpy((uint8_t *)pkt->buffer->data + len, &val, 4);
                 break;
             }
             case OXM_OF_METADATA:{
