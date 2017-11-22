@@ -66,7 +66,8 @@ enum ofp_exp_actions {
     OFPAT_EXP_SET_DATA_VAR,
     OFPAT_EXP_WRITE_CONTEXT_TO_FIELD,
     OFPAT_EXP_DECAPSULATE_GTP,
-    OFPAT_EXP_ENCAPSULATE_GTP
+    OFPAT_EXP_ENCAPSULATE_GTP,
+    OFPAT_EXP_SOFT_DECAPSULATE_GTP
 };
 
 struct ofp_beba_action_experimenter_header {
@@ -167,6 +168,12 @@ struct ofp_exp_action_decapsulate_gtp {
     struct ofp_beba_action_experimenter_header header;  /* we only need the action id */
 };
 OFP_ASSERT(sizeof(struct ofp_exp_action_decapsulate_gtp) == 16);
+
+/* Action structure for OFPAT_EXP_SOFT_DECAPSULATE */
+struct ofp_exp_action_soft_decapsulate_gtp {
+    struct ofp_beba_action_experimenter_header header;  /* we only need the action id */
+};
+OFP_ASSERT(sizeof(struct ofp_exp_action_soft_decapsulate_gtp) == 16);
 
 
 /*EXPERIMENTER MESSAGES*/

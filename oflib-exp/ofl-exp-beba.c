@@ -24,6 +24,12 @@
 #define LOG_MODULE ofl_exp_os
 OFL_LOG_INIT(LOG_MODULE)
 
+bool soft_decap_parsing = false;
+
+bool get_soft_flag();
+
+void set_soft_flag(bool flag);
+
 /* functions used  by ofp_exp_msg_pkttmp_mod */
 static ofl_err
 ofl_structs_add_pkttmp_unpack(struct ofp_exp_add_pkttmp const *src, size_t *len, struct ofl_exp_add_pkttmp *dst) {
@@ -1069,6 +1075,21 @@ ofl_exp_beba_act_unpack(struct ofp_action_header const *src, size_t *len, struct
             *len -= sizeof(struct ofp_exp_action_encapsulate_gtp);
             break;
         }
+        case (OFPAT_EXP_SOFT_DECAPSULATE_GTP):
+        {
+            struct ofp_exp_action_soft_decapsulate_gtp *sa;
+            struct ofl_exp_action_soft_decapsulate_gtp *da;
+
+            sa = (struct ofp_exp_action_soft_decapsulate_gtp *) ext;
+            da = (struct ofl_exp_action_soft_decapsulate_gtp *) malloc(sizeof(struct ofl_exp_action_soft_decapsulate_gtp));
+            da->header.header.experimenter_id = ntohl(exp->experimenter);
+            da->header.act_type = ntohl(ext->act_type);
+            *dst = (struct ofl_action_header *)da;
+            // TODO: error handling
+
+            *len -= sizeof(struct ofp_exp_action_soft_decapsulate_gtp);
+            break;
+        }
         default:
         {
             struct ofl_action_experimenter *da;
@@ -1226,6 +1247,18 @@ ofl_exp_beba_act_pack(struct ofl_action_header const *src, struct ofp_action_hea
 
             return sizeof(struct ofp_exp_action_encapsulate_gtp);
         }
+        case (OFPAT_EXP_SOFT_DECAPSULATE_GTP):
+        {
+            struct ofl_exp_action_soft_decapsulate_gtp *sa = (struct ofl_exp_action_soft_decapsulate_gtp *) ext;
+            struct ofp_exp_action_soft_decapsulate_gtp *da = (struct ofp_exp_action_soft_decapsulate_gtp *) dst;
+
+            da->header.header.experimenter = htonl(exp->experimenter_id);
+            da->header.act_type = htonl(ext->act_type);
+
+            dst->len = htons(sizeof(struct ofp_exp_action_soft_decapsulate_gtp));
+
+            return sizeof(struct ofp_exp_action_soft_decapsulate_gtp);
+        }
         default:
             return 0;
     }
@@ -1259,6 +1292,8 @@ ofl_exp_beba_act_ofp_len(struct ofl_action_header const *act)
             return sizeof(struct ofp_exp_action_decapsulate_gtp);
         case (OFPAT_EXP_ENCAPSULATE_GTP):
             return sizeof(struct ofp_exp_action_encapsulate_gtp);
+        case (OFPAT_EXP_SOFT_DECAPSULATE_GTP):
+            return sizeof(struct ofp_exp_action_decapsulate_gtp);
         default:
             return 0;
     }
@@ -1400,6 +1435,8 @@ ofl_exp_beba_act_to_string(struct ofl_action_header const *act)
             return "{decapsulate_gtp()}";
         case (OFPAT_EXP_ENCAPSULATE_GTP):
             return "{encapsulate_gtp()}";
+        case (OFPAT_EXP_SOFT_DECAPSULATE_GTP):
+            return "{soft_decapsulate_gtp()}";
         
     }
     return NULL;
@@ -1445,6 +1482,12 @@ ofl_exp_beba_act_free(struct ofl_action_header *act) {
         case (OFPAT_EXP_ENCAPSULATE_GTP):
         {
             struct ofl_exp_action_encapsulate_gtp *a = (struct ofl_exp_action_encapsulate_gtp *)ext;
+            free(a);
+            break;
+        }
+        case (OFPAT_EXP_SOFT_DECAPSULATE_GTP):
+        {
+            struct ofl_exp_action_soft_decapsulate_gtp *a = (struct ofl_exp_action_soft_decapsulate_gtp *)ext;
             free(a);
             break;
         }
@@ -3638,7 +3681,7 @@ state_table_decapsulate_gtp(struct ofl_exp_action_decapsulate_gtp *act, struct p
         }
 
         if (!next_proto == IPPROTO_UDP){
-            // it's not gtp encap
+            // it's not gtp 
         } else {
             uint16_t dst_port = pkt->handle_std.proto.udp->udp_dst;
             if (htons(dst_port) != 2152){
@@ -3652,6 +3695,47 @@ state_table_decapsulate_gtp(struct ofl_exp_action_decapsulate_gtp *act, struct p
                 memmove(pkt->buffer->data, eth, ETH_HEADER_LEN); //eth header len
 
                 pkt->handle_std.valid = false;
+            }
+        }
+    } else {
+        //VLOG_WARN_RL(LOG_MODULE, &rl, "Trying to execute GTP_DECAP action on packet with no eth.");
+    }
+
+    return 0;
+}
+
+ofl_err
+state_table_soft_decapsulate_gtp(struct ofl_exp_action_soft_decapsulate_gtp *act, struct packet *pkt) {
+    //packet_handle_std_validate(&pkt->handle_std);
+    if (pkt->handle_std.proto.eth != NULL) {
+        struct eth_header *eth = pkt->handle_std.proto.eth;
+        //struct snap_header *eth_snap = pkt->handle_std.proto.eth_snap;
+        uint16_t next_proto;
+        struct ip_header *ipv4;
+        struct udp_header *udp;
+        struct tcp_header *tcp;
+
+        size_t move_size = IP_HEADER_LEN + UDP_HEADER_LEN + 8; //gtp header len = 8
+
+        if (eth->eth_type == ETH_TYPE_IP){
+            next_proto = pkt->handle_std.proto.ipv4->ip_proto;
+        } else if (eth->eth_type == ETH_TYPE_IPV6){
+            next_proto = pkt->handle_std.proto.ipv6->ipv6_next_hd;
+        } else {
+            // error
+        }
+        if (!next_proto == IPPROTO_UDP){
+            // it's not gtp encap
+        } else {
+            uint16_t dst_port = pkt->handle_std.proto.udp->udp_dst;
+            if (htons(dst_port) != 2152){
+
+            } //not gtp encap
+
+            else {
+                soft_decap_parsing = true;
+                pkt->handle_std.valid = false;
+                return 0;
             }
         }
     } else {
@@ -3686,7 +3770,6 @@ state_table_encapsulate_gtp(struct ofl_exp_action_encapsulate_gtp *act, struct p
                     pkt->buffer->size - ETH_HEADER_LEN);
         //}
 
-        fprintf(stderr, "pkttmp_id: %u\n", act->pkttmp_id);
         HMAP_FOR_EACH_WITH_HASH(pkttmp, struct pkttmp_entry, node,
                                     act->pkttmp_id, &t->entries) 
         {

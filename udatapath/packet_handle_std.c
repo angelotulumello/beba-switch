@@ -49,6 +49,15 @@
 
 #include "../config.h"
 
+extern bool soft_decap_parsing;
+
+bool get_soft_flag(){
+    return soft_decap_parsing;
+}
+
+void set_soft_flag(bool flag){
+    soft_decap_parsing = flag;
+}
 
 int packet_parse(struct packet const *pkt, struct ofl_match *, struct protocols_std *proto);
 
@@ -57,6 +66,7 @@ int packet_parse(struct packet const *pkt, struct ofl_match *m, struct protocols
 	size_t offset = 0;
 	uint16_t eth_type = 0x0000;
         uint8_t next_proto = 0;
+    bool soft_decap_parsing = false;
 
 	/* Resets all protocol fields to NULL */
 
@@ -102,6 +112,13 @@ int packet_parse(struct packet const *pkt, struct ofl_match *m, struct protocols
 
         proto->eth = (struct eth_header *)((uint8_t const *) pkt->buffer->data + offset);
         offset += sizeof(struct eth_header);
+
+        // SOFT_DECAP patch
+        if (get_soft_flag()) {
+            offset += 20 + 8 + 8;
+            set_soft_flag(false);
+        }
+
 
 	eth_type = ntohs(proto->eth->eth_type);
 
@@ -268,6 +285,7 @@ int packet_parse(struct packet const *pkt, struct ofl_match *m, struct protocols
 
             return 0;
         }
+
         /* Network Layer */
         else if (eth_type == ETH_TYPE_IP) {
 		if (unlikely(pkt->buffer->size < offset + sizeof(struct ip_header))) {
@@ -458,6 +476,8 @@ packet_handle_std_validate(struct packet_handle_std *handle) {
     uint32_t current_global_state = OFP_GLOBAL_STATE_DEFAULT;
     gettimeofday(&tv,NULL);
     timestamp = (1000000 * tv.tv_sec + tv.tv_usec)/1000; // timestamp in ms
+
+    fprintf(stderr, "validating pkt\n");
 
     if(handle->valid)
         return;

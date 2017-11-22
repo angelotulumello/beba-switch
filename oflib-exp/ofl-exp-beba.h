@@ -16,6 +16,7 @@
 /**************************************************************************/
 /*                        experimenter messages ofl_exp                   */
 /**************************************************************************/
+
 struct ofl_exp_beba_msg_header {
     struct ofl_msg_experimenter   header; /* BEBA_VENDOR_ID */
 
@@ -255,6 +256,10 @@ struct ofl_exp_action_decapsulate_gtp {
     struct ofl_exp_beba_act_header header; /* OFPAT_EXP_DECAPSULATE_GTP */
 };
 
+struct ofl_exp_action_soft_decapsulate_gtp {
+    struct ofl_exp_beba_act_header header; /* OFPAT_EXP_SOFT_DECAPSULATE_GTP */
+};
+
 /*************************************************************************/
 /*                        experimenter state table						 */
 /*************************************************************************/
@@ -420,6 +425,9 @@ state_table_write_context_to_field(struct state_table *table, struct ofl_exp_act
 
 ofl_err
 state_table_decapsulate_gtp(struct ofl_exp_action_decapsulate_gtp *act, struct packet *pkt);
+
+ofl_err
+state_table_soft_decapsulate_gtp(struct ofl_exp_action_soft_decapsulate_gtp *act, struct packet *pkt);
 
 ofl_err
 state_table_encapsulate_gtp(struct ofl_exp_action_encapsulate_gtp *act, struct packet *pkt);
